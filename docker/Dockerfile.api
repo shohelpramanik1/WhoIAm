@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS builder
+WORKDIR /src
+
+# Copy solution file
+COPY ["WhoIAm.sln", "./"]
+
+# Copy project files
+COPY ["src/WhoIAm.Domain/WhoIAm.Domain.csproj", "src/WhoIAm.Domain/"]
+COPY ["src/WhoIAm.Application/WhoIAm.Application.csproj", "src/WhoIAm.Application/"]
+COPY ["src/WhoIAm.Infrastructure/WhoIAm.Infrastructure.csproj", "src/WhoIAm.Infrastructure/"]
+COPY ["src/WhoIAm.Api/WhoIAm.Api.csproj", "src/WhoIAm.Api/"]
+
+# Restore dependencies
+RUN dotnet restore "WhoIAm.sln"
+
+# Copy source code
+COPY src/ src/
+
+# Build
+RUN dotnet build "WhoIAm.sln" -c Release --no-restore
+RUN dotnet publish "src/WhoIAm.Api/WhoIAm.Api.csproj" -c Release --no-build -o /app/publish
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+COPY --from=builder /app/publish .
+
+ENTRYPOINT ["dotnet", "WhoIAm.Api.dll"]
