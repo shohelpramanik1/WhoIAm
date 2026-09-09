@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # SQL Server
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: whoiam-sqlserver
+    environment:
+      SA_PASSWORD: "YourPassword123!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "YourPassword123!" -Q "SELECT 1"
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: whoiam-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # API
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: whoiam-api
+    ports:
+      - "5001:5001"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "https://+:5001"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=WhoIAm;User Id=sa;Password=YourPassword123!;"
+      Redis__ConnectionString: "redis:6379"
+      Jwt__Key: "your-super-secret-key-that-is-long-enough-for-jwt-signing"
+      Jwt__Issuer: "whoiam-api"
+      Jwt__Audience: "whoiam-app"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./docker/certs:/app/certs:ro
+
+  # Frontend
+  web:
+    build:
+      context: ./src/WhoIAm.Web
+      dockerfile: Dockerfile
+    container_name: whoiam-web
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: "https://api:5001"
+    depends_on:
+      - api
+
+volumes:
+  sqlserver_data:
+  redis_data:
+
+networks:
+  default:
+    name: whoiam-network

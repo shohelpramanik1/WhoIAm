@@ -1,0 +1,33 @@
+# Visual Studio
+.vs/
+.vscode/
+*.sln.user
+*.suo
+*.user
+bin/
+obj/
+.DS_Store
+
+# Environment
+.env
+.env.local
+appsettings.Development.json
+
+# Node/Frontend
+node_modules/
+.next/
+dist/
+.parcel-cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDEs
+.idea/
+*.swp
+*.swo
+
+# Build output
+out/
